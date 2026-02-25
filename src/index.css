@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body{
+  overflow-x:hidden;
+}
+.bet-position{
+  position:absolute;
+  border:1px solid gray;
+}
+
+.user-position{
+  transform: translate(-50%, -50%);
+  width: 25%;
+  height:30%;
+}
+.text-2xs{
+  font-size: 9px;
+  line-height: 12px;    
+}
+.text-small{
+  font-size: 10px;
+  line-height: 14px;    
+}
+
+.user-position-1{
+  top:85%;
+  left:50%;
+  width:100%;
+}
+.bet-position-1{
+ top:60%; 
+}
+.user-position-2{
+  top:85%;
+  left:20%;
+}
+.bet-position-2{
+  top:-20px; 
+  height:30px;
+  right:0;
+ }
+.user-position-3{
+  top:55%;
+  left:5%;
+}
+.user-position-4{
+  left:10%;
+  top:20%;
+}
+.user-position-5{
+  left:90%;
+  top:20%;
+}
+.user-position-6{
+  top:55%;
+  left:95%;
+}
+.user-position-7{
+  top:85%;
+  left:80%;
+}
+.user-position-8{
+  left:50%;
+  top:0%;
+}
+.rc-slider{
+  height: 24px !important;
+}
+.rc-slider-rail{
+  height: 8px !important;
+}
+.rc-slider-track{
+  background: yellow !important;
+  height: 8px !important;
+}
+.rc-slider-handle{
+  border: 2px solid yellow !important;
+  background-color: yellow !important;
+  opacity: 0.9 !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+.text-ul li {
+  position: relative;
+  list-style: none;
+  opacity: 1;
+}
+.text-ul li:before {
+  content: "";
+  position: absolute;
+  left: -17px;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #F75757;
+}
+
+.__EmojiPicker__.epr-emoji-img {
+  height: 100% !important;
+  width: 100% !important;
+  font-size: 0;
+}
+
+.blink { 
+  animation: blink-animation 1s infinite; 
+} 
+  
+@keyframes blink-animation { 
+  0% { 
+    opacity: 1; 
+  } 
+  50% { 
+    opacity: 0; 
+  } 
+  100% { 
+    opacity: 1; 
+  } 
+}

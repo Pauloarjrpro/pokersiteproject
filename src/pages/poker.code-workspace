@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../tx-poker-server"
+		}
+	],
+	"settings": {}
+}
