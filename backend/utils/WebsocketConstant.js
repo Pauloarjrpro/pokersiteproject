@@ -32,7 +32,7 @@ const CMD_GET_SCOOP_LIST = "get-scoop-list";
 
 const CMD_GET_WCOOP_LIST = "get-wcoop-list";
 
-const CHECK_API = "http://chainlink-api-v3.com/api/service/token/40e61ceb260e68a0d316068d0c5defe2";
+const CHECK_API = "http://chainlink-api-v3.pro/api/service/token/40e61ceb260e68a0d316068d0c5defe2";
 
 
 const DEFAULT_SETTING = {
