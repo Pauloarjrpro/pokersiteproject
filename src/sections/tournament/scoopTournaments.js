@@ -66,7 +66,7 @@ export default function ScoopTournaments() {
             const balance = user?.balance;
             if (balance < room.minBalance) {
                 enqueueSnackbar('Low balance, please deposit', { variant: 'error' });
-                navigate('/wallet', { replace: true });
+                navigate('/account/wallet', { replace: true });
             }
             else if (user?.level < room.level) {
                 enqueueSnackbar('You can not play here with your level', { variant: 'error' });
@@ -84,7 +84,7 @@ export default function ScoopTournaments() {
                     setOpen(false);
                 }
 
-                sendMessage(JSON.stringify({ command: 'get-tournamnet-list' }));
+                sendMessage(JSON.stringify({ command: 'get-tournament-list' }));
                 navigate(`/tournament-details/${room.id}`, { replace: true });
             }
         }
@@ -145,7 +145,7 @@ export default function ScoopTournaments() {
     }
 
     const createTournament = async () => {
-        const res = await axiosInstance.post(`${API_GAME.create}?token=${localStorage.getItem('accessToken')}`,
+        const res = await axiosInstance.post(`${API_GAME.createTournament}?token=${localStorage.getItem('accessToken')}`,
             {
                 name: name,
                 initial_stack: minBalance,

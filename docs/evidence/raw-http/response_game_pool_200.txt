@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+Content-Length: 132
+ETag: W/"84-/Ehgsem5k7cYcE+XvkXrZxaqK7o"
+Date: Thu, 12 Mar 2026 20:49:14 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":0,"message":"success","response":"got data","result":{"pools":[{"poolAmount":null}],"current":"2026-03-12T20:49:13.827Z"}}

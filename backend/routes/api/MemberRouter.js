@@ -32,6 +32,7 @@ router.get(
 )
 router.post(
     '/getAmount',
+    auth,
     MemberController.amount
 )
 router.post(

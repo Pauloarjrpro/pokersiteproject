@@ -27,10 +27,10 @@ const API_TOURNAMENT={
 const API_ACCOUNT = {
   profileWithImage:'/api/account/set-profile-with-image',
   profileWithoutImage:'/api/account/set-profile-without-image',
-  withdraw: './api/account/withdraw',
-  deposit: './api/account/deposit',
-  getWithdraw: './api/account/getWithdraw',
-  getDeposit: './api/account/getDeposit'
+  withdraw: '/api/account/withdraw',
+  deposit: '/api/account/deposit',
+  getWithdraw: '/api/account/getWithdraw',
+  getDeposit: '/api/account/getDeposit'
 }
 const axiosInstance = axios.create({
   baseURL: SERVER_HTTP_ADDR,

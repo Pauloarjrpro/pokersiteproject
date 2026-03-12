@@ -144,9 +144,8 @@ function AuthProvider({ children }) {
 
   const register = async (iForm) => {
     const response = await axios.post(API_AUTH.register, iForm);
-    const { accessToken, user } = response.data.result;
-
-    localStorage.setItem('accessToken', accessToken);
+    const { token, user } = response.data.result;
+    setSession(token);
 
     dispatch({
       type: 'REGISTER',

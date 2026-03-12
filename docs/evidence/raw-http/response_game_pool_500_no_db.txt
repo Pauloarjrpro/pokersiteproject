@@ -1,0 +1,11 @@
+HTTP/1.1 500 Internal Server Error
+X-Powered-By: Express
+Access-Control-Allow-Origin: *
+Content-Type: application/json; charset=utf-8
+Content-Length: 335
+ETag: W/"14f-ZhnZVl+zsTpQD3J3u3PJuOAI57E"
+Date: Thu, 12 Mar 2026 21:02:56 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":500,"message":"error","response":"Query Error","result":{"name":"SequelizeConnectionRefusedError","parent":{"errno":-61,"code":"ECONNREFUSED","syscall":"connect","address":"127.0.0.1","port":3306,"fatal":true},"original":{"errno":-61,"code":"ECONNREFUSED","syscall":"connect","address":"127.0.0.1","port":3306,"fatal":true}}}

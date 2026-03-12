@@ -1,7 +1,8 @@
 const { validationResult } = require('express-validator');
-const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
+const fs = require('fs');
+const path = require('path');
 const ResponseData = require('../utils/ResponseData');
 const Models = require('../models/Model');
 
@@ -61,7 +62,8 @@ const login = async (req, res) => {
     const { JOINED_USERS } = require('./WebsocketController');
 
     const validResult = validationResult(req);
-    if (!validResult.isEmpty) {
+    // Validate request fields before touching the database.
+    if (!validResult.isEmpty()) {
         return ResponseData.warning(res, validResult.array()[0].msg);
     }
     try {
@@ -95,7 +97,7 @@ const login = async (req, res) => {
 }
 const logout = async (req, res) => {
     const validResult = validationResult(req);
-    if (!validResult.isEmpty) {
+    if (!validResult.isEmpty()) {
         return ResponseData.warning(res, validResult.array()[0].msg);
     }
     try {
@@ -123,7 +125,7 @@ const logout = async (req, res) => {
 
 const register = async (req, res) => {
     const validResult = validationResult(req);
-    if (!validResult.isEmpty) {
+    if (!validResult.isEmpty()) {
         if(req.file){
             fs.unlink(path.resolve(req.file.path), (err) => { });
         }
@@ -136,12 +138,15 @@ const register = async (req, res) => {
             return ResponseData.warning(res, "Already use this email , try login");
         }
         else {
-            const user = await UserModel.create({
+            const userPayload = {
                 email,
                 fullName,
-                avatar:req.file.path,
                 password: await encryptPassword(password),
-            });
+            };
+            if (req.file?.path) {
+                userPayload.avatar = req.file.path;
+            }
+            const user = await UserModel.create(userPayload);
 
             const payload = { id: user.id, email };
             const token = jwtsign(payload);

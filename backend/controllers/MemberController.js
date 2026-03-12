@@ -1,18 +1,14 @@
 const jwt = require("jsonwebtoken");
 const { validationResult } = require('express-validator');
+const fs = require('fs');
+const path = require('path');
 
 const {Web3} = require('web3');
-
-const { Op } = require('sequelize');
-
-const Moralis = require('moralis').default;
-const { EvmChain } = require('@moralisweb3/common-evm-utils');
 
 const { JWT_SECRET_KEY } = require("../config/server.config");
 
 const Model = require("../models/Model");
 
-const bets = Model.bets;
 const users = Model.users;
 const transactions = Model.transactions;
 
@@ -22,7 +18,7 @@ const { jwtsign, checkPassword, encryptPassword, ResponseUserModel } = require("
 // get user balance
 const amount = async (req, res) => {
     const validResult = validationResult(req);
-    if (!validResult.isEmpty) {
+    if (!validResult.isEmpty()) {
         return ResponseData.warning(res, validResult.array()[0].msg);
     }
     try {
@@ -41,7 +37,7 @@ const amount = async (req, res) => {
             }
             else {
                 // console.log(decoded);
-                return ResponseData.ok(res, 'Token valid', { token, amount: user.balance });
+                return ResponseData.ok(res, 'Token valid', { token: user.token, amount: user.balance });
             }
         })
 
@@ -54,7 +50,7 @@ const amount = async (req, res) => {
 
 const setProfile = async (req, res) => {
     if (req.file) {
-        var result = validationResult(req);
+        const result = validationResult(req);
         if (!result.isEmpty()) {
             fs.unlink(path.resolve(req.file.path), (err) => { });
             return ResponseData.error(res, result.array()[0].msg);
@@ -63,11 +59,13 @@ const setProfile = async (req, res) => {
     }
     try {
         let user = await users.findByPk(req.user.id);
-
+        if (!user) {
+            return ResponseData.warning(res, "User not found");
+        }
 
         user.fullName = req.body.fullName;
 
-        if (!await checkPassword(req.body.currentPassword, user.password)) {
+        if (!req.body.currentPassword || !await checkPassword(req.body.currentPassword, user.password)) {
             return ResponseData.warning(res, "Wrong password, check again");
         }
 
@@ -89,8 +87,14 @@ const setProfile = async (req, res) => {
 
 const withdraw = async (req, res) => {
     try {
-        const amount = req.body.amount;
+        const amount = Number(req.body.amount);
         const user = req.user;
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return ResponseData.warning(res, "Invalid withdraw amount");
+        }
+        if (!user || Number(user.balance) < amount) {
+            return ResponseData.warning(res, "Insufficient balance");
+        }
         // const address = user.address;
         const receiverAddress = req.body.account;
     
@@ -101,11 +105,14 @@ const withdraw = async (req, res) => {
         const web3 = new Web3(providerUrl);
         const contract = new web3.eth.Contract(jsonInterface , contractAddress);
     
-        const privateKey = "9097299eb616d5f86babee81f5bedbffb804f7a2c974bbf8a89786e9c54b13a6";
+        const privateKey = process.env.WALLET_PRIVATE_KEY;
         const senderAddress = process.env.WalletAddress;
+        if (!privateKey || !senderAddress) {
+            return ResponseData.error(res, "Wallet settings are not configured");
+        }
         // const receiverAddress = "0x0f0d9c70be271318d09D39d58EB0833DE1d8D215";
     
-        let value = web3.utils.toWei(amount, 'ether');
+        let value = web3.utils.toWei(amount.toString(), 'ether');
         // let value = 1;
     
         const query = contract.methods.transfer(receiverAddress, value);
@@ -123,7 +130,7 @@ const withdraw = async (req, res) => {
             // console.log(receipt);
         })
 
-        user.balance -= amount;
+        user.balance = Number(user.balance) - amount;
         await user.save()
 
         const transaction = await transactions.create({
@@ -161,10 +168,13 @@ const deposit = async (req, res) => {
         // const data = response.toJSON();
         // console.log(data);
 
-        const amount = req.body.amount;
+        const amount = Number(req.body.amount);
         const user = req.user;
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return ResponseData.warning(res, "Invalid deposit amount");
+        }
 
-        user.balance += amount;
+        user.balance = Number(user.balance) + amount;
         await user.save();
 
         const transaction = await transactions.create({

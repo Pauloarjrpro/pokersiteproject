@@ -53,7 +53,7 @@ export default function CurrentGames() {
             const balance = user?.balance;
             if (balance < room.minBalance) {
                 enqueueSnackbar('Low balance, please deposit', { variant: 'error' });
-                navigate('/wallet', { replace: true });
+                navigate('/account/wallet', { replace: true });
             }
             else if (user?.level < room.level) {
                 enqueueSnackbar('You can not play here with your level', { variant: 'error' });

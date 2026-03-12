@@ -5,12 +5,9 @@ const { JWT_SECRET_KEY } = require("../config/server.config");
 
 const { WebSocketServer } = require("ws");
 
-const { GameRoom } = require("../core/GameRoom");
-
 const jwt = require('jsonwebtoken');
 
-const { uploadBet } = require("./GameController");
-const { rounds, games, convertTransferObjects, initGames, createEmptyPlayers } = require("../core/Game");
+const { games, convertTransferObjects } = require("../core/Game");
 const { 
     CMD_JOIN_ROOM, 
     CMD_UPDATE_ROOM, 
@@ -29,7 +26,6 @@ const {
     GAME_STATUS_ALLIN, 
     GAME_STATUS_RAISEX, 
     GAME_STATUS_END, 
-    DEFAULT_SETTING,
     CMD_QUIT_ROOM_REQUEST, 
     GAME_GROUP_CHAT,
     CMD_GET_SCOOP_LIST,
@@ -38,13 +34,11 @@ const {
 const { users, tournaments, tournament_users,rooms } = require("../models/Model");
 const { User } = require("../core/User");
 
-const { distributePlayers } = require("../utils/distributePlayer");
-
 let GAME_SERVER_SOCKET, CLIENT_SOCKETS = [], JOINED_USERS = [], LAST_USER_COMMAND = [];
 
 const userQuitRequest = async (user, roomId, ws, email) => {
     if (user == null)
-        return;
+        return null;
     let currentGame = null;
     for (let game of games) {
         if (game.id == roomId) {
@@ -84,7 +78,7 @@ const userQuitRequest = async (user, roomId, ws, email) => {
 
     }
     else {
-        ws.send(JSON.stringify({ command: CMD_QUIT_ROOM, success: true, game: currentGame.convertTransferObject(), target: user.id, message: `Already requested, don't repeat`, variant: 'error' }))
+        ws.send(JSON.stringify({ command: CMD_QUIT_ROOM, success: false, target: user.id, message: `Already requested, don't repeat`, variant: 'error' }))
     }
     return currentGame;
 }
@@ -128,45 +122,42 @@ const gameStart = async (roomId) => {
 
 const kickUser = async (user_id, roomId) => {
     let currentGame = null;
-
-    let oldGame = null;
-
     const userModel = await users.findOne({ where: { id: user_id } });
-
-    const user = JOINED_USERS[userModel.email]; 
-    //console.log('user', user);
-
-    for (let game of games) {
-        if (!game.quitRequests.includes(user.id)) {
-            oldGame = game;
-            // game is not run yet or finished or user is not ready
-            if (game.status == GAME_STATUS_WAIT || game.status == GAME_STATUS_END || user.status == GAME_STATUS_WAIT) {
-                const userModel = await users.findOne({ where: { id: user.id } });
-                await userModel.update({ lastGameId: 0 });
-                game.users[user.place] = new User({ avatar: '', bot: true });
-                if (!game.availableSeats.includes(user.place))
-                    game.availableSeats.push(user.place);
-                JOINED_USERS[userModel.email] = null;
-            }
-            // game is running
-            else {
-                user.status = GAME_STATUS_FOLD;
-                game.Fold(user);
-                game.quitRequests.push(user.id);
-
-            }
-
-            currentGame = game;
-        }
+    if (!userModel) {
+        return null;
     }
+    const user = JOINED_USERS[userModel.email]; 
+    if (!user) {
+        return null;
+    }
+    const game = games.find((g) => Number(g.id) === Number(roomId));
+    if (!game || game.quitRequests.includes(user.id)) {
+        return null;
+    }
+    if (game.status == GAME_STATUS_WAIT || game.status == GAME_STATUS_END || user.status == GAME_STATUS_WAIT) {
+        await userModel.update({ lastGameId: 0 });
+        game.users[user.place] = new User({ avatar: '', bot: true });
+        if (!game.availableSeats.includes(user.place))
+            game.availableSeats.push(user.place);
+        JOINED_USERS[userModel.email] = null;
+    }
+    else {
+        user.status = GAME_STATUS_FOLD;
+        game.Fold(user);
+        game.quitRequests.push(user.id);
+    }
+    currentGame = game;
+
     if (currentGame != null) {
         // send game info
         const message = `${currentGame.status===GAME_STATUS_START ?'Quit request success accepted. You will quit when this round finish':`You just quit from  ${currentGame.name} table`} `;
-        user.ws.send(JSON.stringify({ command: CMD_QUIT_ROOM, success: (currentGame.status===GAME_STATUS_START), game: currentGame.convertTransferObject(), target: user.id,message }))
+        if (user.ws && user.ws.readyState === WebSocket.OPEN) {
+            user.ws.send(JSON.stringify({ command: CMD_QUIT_ROOM, success: (currentGame.status===GAME_STATUS_START), game: currentGame.convertTransferObject(), target: user.id,message }))
+        }
         // not registered on user list of current game 
         broadcastToRoom({ command: CMD_QUIT_ROOM, success: true, game: currentGame.convertTransferObject(), target: user.id, message, variant: 'success' }, currentGame);
-
     }
+    return currentGame;
 }
 
 const userJoined = (user, roomId, isNew, ws) => {
@@ -176,9 +167,8 @@ const userJoined = (user, roomId, isNew, ws) => {
             if (isNew) {
                 // console.log('is new user', user)
                 if (game.availableSeats.length > 0) {
-
-                    const index = Math.random() * (game.availableSeats.length - 1);
-                    const seat = game.availableSeats[Math.floor(index)];
+                    const index = Math.floor(Math.random() * game.availableSeats.length);
+                    const seat = game.availableSeats[index];
 
                     user.place = seat;
                     user.ws = ws;
@@ -282,7 +272,7 @@ const initEventListener = () => {
 
                                 games.splice(index, 1);
 
-                                await rooms.destroy({where: { id: 2 }});
+                                await rooms.destroy({where: { id: game.id }});
                             }
 
                             const user = game.users.filter((t)=>!t.bot)[0]; console.log('final================================', user);
@@ -398,8 +388,6 @@ const initializeServerSocket = async (server) => {
 
         GAME_SERVER_SOCKET = rss;
 
-        const initGame = new GameRoom({dataValues: DEFAULT_SETTING, users:createEmptyPlayers(7) });
-
         rss.on('connection', async (ws, req) => {
             const token = url.parse(req.url, true).query.token;
             // console.log(token, "connected new client", initGame);
@@ -413,7 +401,14 @@ const initializeServerSocket = async (server) => {
                         CLIENT_SOCKETS[decode.email] = ws;
 
                         ws.on('message', async (_data) => {
-                            const data = JSON.parse(_data);
+                            let data = null;
+                            try {
+                                // Reject malformed payloads instead of crashing the WS handler.
+                                data = JSON.parse(_data);
+                            } catch (err) {
+                                ws.send(JSON.stringify({ success: false, message: "Invalid payload" }));
+                                return;
+                            }
                             const { command, roomId } = data;
                             const user = await users.findOne({ where: { email: decode.email } });
 
@@ -459,7 +454,7 @@ const initializeServerSocket = async (server) => {
                             // when user request quit
                             if (command == CMD_QUIT_ROOM) {
                                 const nUser = JOINED_USERS[decode.email];
-                                const game = userQuitRequest(nUser, parseInt(roomId), ws, decode.email);
+                                const game = await userQuitRequest(nUser, parseInt(roomId), ws, decode.email);
                                 if (nUser == null || !nUser || game == null) {
                                     ws.send(JSON.stringify({ command: CMD_QUIT_ROOM, success: false, }))
                                 }
@@ -527,7 +522,11 @@ const initializeServerSocket = async (server) => {
                                         ws.send(JSON.stringify({ command: 'repeat', message: `can not repeat same command ${command}` }));
                                     }
                                     else {
-                                        const { amount } = data;
+                                        const amount = Number(data.amount);
+                                        if (!Number.isFinite(amount) || amount <= 0 || amount > Number(nUser.balance)) {
+                                            ws.send(JSON.stringify({ command: 'error', message: 'Invalid bet amount' }));
+                                            return;
+                                        }
                                         nUser.status = command;
                                         if(nUser.balance === amount)
                                             nUser.status = GAME_STATUS_ALLIN;
@@ -553,7 +552,7 @@ const initializeServerSocket = async (server) => {
 
                             if (data.command == CMD_GET_TOURNAMENT_USERS) {
                                 const tournament_players = await tournament_users.findAll({where: {tournament_id: data.id}, include: [users]});
-                                const current_tournament = await tournaments.findOne({id: data.id});
+                                const current_tournament = await tournaments.findOne({ where: { id: data.id } });
                                 // console.log(tournament_players);
                                 broadcastToClients({ command: CMD_GET_TOURNAMENT_USERS, tournament: current_tournament, users: tournament_players, tournament_id: data.id }, GAME_SERVER_SOCKET);
                             }
@@ -618,7 +617,7 @@ const updatedRooms = async (games) => {
 }
 
 const updatedTournaments = async() => {
-    const allTournaments = await tournaments.findAll({status: 'wait', include: [tournament_users]});
+    const allTournaments = await tournaments.findAll({ where: { status: 'wait' }, include: [tournament_users]});
     broadcastToClients({ command: CMD_GET_TOURNAMENT_LIST, list: allTournaments }, GAME_SERVER_SOCKET);
 }
 
